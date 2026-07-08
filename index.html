@@ -29,7 +29,6 @@
       import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0/+esm";
       const discordSdk = new DiscordSDK("1524489022930419904");
       window.discordSdk = discordSdk;
-      
       async function setupDiscord() {
         await discordSdk.ready();
         const { code } = await discordSdk.commands.authorize({
@@ -47,26 +46,20 @@
         const { access_token } = await response.json();
         await discordSdk.commands.authenticate({ access_token });
         document.getElementById("loading-text").style.display = "none";
-        
-        // This triggers the Unity load once Discord is ready
         startUnity();
       }
-      
       function startUnity() {
-        // Absolute paths to GitHub Pages to prevent Discord PC Proxy errors
-        var buildUrl = "https://notgame-minecraft.github.io/Toilets-Battleground/Build"; 
-        var loaderUrl = buildUrl + "/game%20v2.loader.js";
-        
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/game v2.loader.js";
         var config = {
-          dataUrl: buildUrl + "/game%20v2.data",
-          frameworkUrl: buildUrl + "/game%20v2.framework.js",
-          codeUrl: buildUrl + "/game%20v2.wasm",
-          streamingAssetsUrl: "https://notgame-minecraft.github.io/Toilets-Battleground/StreamingAssets",
+          dataUrl: buildUrl + "/game v2.data",
+          frameworkUrl: buildUrl + "/game v2.framework.js",
+          codeUrl: buildUrl + "/game v2.wasm",
+          streamingAssetsUrl: "StreamingAssets",
           companyName: "DefaultCompany",
           productName: "My project",
           productVersion: "0.1.0",
         };
-        
         var script = document.createElement("script");
         script.src = loaderUrl;
         script.onload = () => {
@@ -75,7 +68,6 @@
         };
         document.body.appendChild(script);
       }
-      
       setupDiscord().catch((err) => {
         document.getElementById("loading-text").innerText =
           "Discord auth failed: " + err.message;
