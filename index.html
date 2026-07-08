@@ -26,9 +26,10 @@
       <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
     <script type="module">
-      import { DiscordSDK } from "/.proxy/esm-sh/npm/@discord/embedded-app-sdk@2.5.0/+esm";
+      import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0/+esm";
       const discordSdk = new DiscordSDK("1524489022930419904");
       window.discordSdk = discordSdk;
+      
       async function setupDiscord() {
         await discordSdk.ready();
         const { code } = await discordSdk.commands.authorize({
@@ -46,20 +47,26 @@
         const { access_token } = await response.json();
         await discordSdk.commands.authenticate({ access_token });
         document.getElementById("loading-text").style.display = "none";
+        
+        // This triggers the Unity load once Discord is ready
         startUnity();
       }
+      
       function startUnity() {
-        var buildUrl = "Build";
+        // Absolute paths to GitHub Pages to prevent Discord PC Proxy errors
+        var buildUrl = "https://notgame-minecraft.github.io/Toilets-Battleground/Build"; 
         var loaderUrl = buildUrl + "/game%20v2.loader.js";
+        
         var config = {
           dataUrl: buildUrl + "/game%20v2.data",
           frameworkUrl: buildUrl + "/game%20v2.framework.js",
           codeUrl: buildUrl + "/game%20v2.wasm",
-          streamingAssetsUrl: "StreamingAssets",
+          streamingAssetsUrl: "https://notgame-minecraft.github.io/Toilets-Battleground/StreamingAssets",
           companyName: "DefaultCompany",
           productName: "My project",
           productVersion: "0.1.0",
         };
+        
         var script = document.createElement("script");
         script.src = loaderUrl;
         script.onload = () => {
@@ -68,6 +75,7 @@
         };
         document.body.appendChild(script);
       }
+      
       setupDiscord().catch((err) => {
         document.getElementById("loading-text").innerText =
           "Discord auth failed: " + err.message;
