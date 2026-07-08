@@ -1,64 +1,97 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
+<head>
     <meta charset="utf-8">
-    <title>My project</title>
-    <!-- Include the official Discord Embedded App SDK -->
-    <script src="https://jsdelivr.net"></script>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Toilets Battleground</title>
+    <style>
+      html, body {
+        width: 100%; height: 100%;
+        margin: 0; padding: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      #unity-container { width: 100%; height: 100%; }
+      #unity-canvas { width: 100%; height: 100%; display: block; }
+      #loading-text {
+        color: #fff; font-family: sans-serif;
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+      }
+    </style>
   </head>
   <body>
+    <div id="loading-text">Connecting to Discord...</div>
     <div id="unity-container">
-      <!-- Unity Canvas using template variable tags -->
-      <canvas id="unity-canvas" width=960 height=600></canvas>
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
 
-    <script>
-      // Initialize the Discord SDK (Replace with your actual ID from Discord Developer Portal)
-      const discordSdk = new Discord.DiscordSDK("1524489022930419904");
+    <script type="module">
+      // The SDK package has no plain browser bundle, so it's imported here
+      // as a proper ES module via esm.sh (which bundles it on the fly).
+      import { DiscordSDK } from "https://esm.sh/@discord/embedded-app-sdk@2.5.0";
+
+      // Replace with your real Application ID
+      const discordSdk = new DiscordSDK("1524489022930419904");
+      window.discordSdk = discordSdk; // so Unity's .jslib bridge can reach it
 
       async function setupDiscord() {
         await discordSdk.ready();
-        
-        // Authorize with Discord to get user data and room channel context
+
+        // Step 1: Ask Discord to authorize (opens the OAuth prompt)
         const { code } = await discordSdk.commands.authorize({
           client_id: "1524489022930419904",
           response_type: "code",
-          state: "1",
+          state: "",
           prompt: "none",
-          scope: ["identify", "rpc.voice.read"],
+          scope: ["identify"],
         });
 
-        // Forward the specific channel ID to Unity once it is running
-        window.unityInstance.SendMessage('DiscordNetworkManager', 'SetDiscordContext', discordSdk.channelId);
+        // Step 2: Send that code to YOUR backend to exchange for a token
+        // This URL must point at your server (Pi/Cloudflare tunnel), not GitHub Pages
+        const response = await fetch("/.proxy/api/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        const { access_token } = await response.json();
+
+        // Step 3: Authenticate with Discord using that token
+        await discordSdk.commands.authenticate({ access_token });
+
+        document.getElementById("loading-text").style.display = "none";
+
+        // Now safe to start loading the Unity build
+        startUnity();
       }
 
-      // Tells Unity where to grab the compiled engine files during the build process
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/game v2.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/game v2.data",
-        frameworkUrl: buildUrl + "/game v2.framework.js",
-        codeUrl: buildUrl + "/game v2.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "My project",
-        productVersion: "0.1.0",
-      };
+      function startUnity() {
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+        var config = {
+          dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+          frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+          codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "{{{ COMPANY_NAME }}}",
+          productName: "{{{ PRODUCT_NAME }}}",
+          productVersion: "{{{ PRODUCT_VERSION }}}",
+        };
 
-      var canvas = document.querySelector("#unity-canvas");
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          // Optional loading bar code goes here
-        }).then((instance) => {
-          window.unityInstance = instance;
-          setupDiscord(); // Boot up Discord functions after game engine loads
-        }).catch((message) => {
-          alert(message);
-        });
-      };
-      document.body.appendChild(script);
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(document.getElementById("unity-canvas"), config)
+            .catch((message) => alert(message));
+        };
+        document.body.appendChild(script);
+      }
+
+      setupDiscord().catch((err) => {
+        document.getElementById("loading-text").innerText =
+          "Discord auth failed: " + err.message;
+        console.error(err);
+      });
     </script>
   </body>
 </html>
