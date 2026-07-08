@@ -29,7 +29,7 @@
     <script type="module">
       // The SDK package has no plain browser bundle, so it's imported here
       // as a proper ES module via esm.sh (which bundles it on the fly).
-      import { DiscordSDK } from "/esm-sh/@discord/embedded-app-sdk@2.5.0";
+      import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0";
 
       // Replace with your real Application ID
       const discordSdk = new DiscordSDK("1524489022930419904");
@@ -49,7 +49,7 @@
 
         // Step 2: Send that code to YOUR backend to exchange for a token
         // This URL must point at your server (Pi/Cloudflare tunnel), not GitHub Pages
-        const response = await fetch("/api/token", {
+        const response = await fetch("/.proxy/api/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),
