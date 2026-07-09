@@ -5,74 +5,99 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Toilets Battleground</title>
     <style>
-      html, body {
-        width: 100%; height: 100%;
-        margin: 0; padding: 0;
-        background: #000;
-        overflow: hidden;
-      }
-      #unity-container { width: 100%; height: 100%; }
-      #unity-canvas { width: 100%; height: 100%; display: block; }
-      #loading-text {
-        color: #fff; font-family: sans-serif;
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-      }
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+        }
+        #unity-container {
+            width: 100%;
+            height: 100%;
+        }
+        #unity-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #loading-text {
+            color: #fff;
+            font-family: sans-serif;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div id="loading-text">Connecting to Discord...</div>
     <div id="unity-container">
-      <canvas id="unity-canvas" tabindex="-1"></canvas>
+        <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
+
     <script type="module">
-      import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0/+esm";
-      const discordSdk = new DiscordSDK("1524489022930419904");
-      window.discordSdk = discordSdk;
-      async function setupDiscord() {
-        await discordSdk.ready();
-        const { code } = await discordSdk.commands.authorize({
-          client_id: "1524489022930419904",
-          response_type: "code",
-          state: "",
-          prompt: "none",
-          scope: ["identify"],
+        // RESTORED: Kept as an absolute path because Discord requires this exact root mapping for the SDK proxy
+        import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0/+esm";
+        
+        const discordSdk = new DiscordSDK("1524489022930419904");
+        window.discordSdk = discordSdk;
+
+        async function setupDiscord() {
+            await discordSdk.ready();
+            const { code } = await discordSdk.commands.authorize({
+                client_id: "1524489022930419904",
+                response_type: "code",
+                state: "",
+                prompt: "none",
+                scope: ["identify"],
+            });
+
+            // RESTORED: Kept as an absolute root path for the token API proxy
+            const response = await fetch("/.proxy/api/token", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ code }),
+            });
+            
+            const { access_token } = await response.json();
+            await discordSdk.commands.authenticate({ access_token });
+            
+            document.getElementById("loading-text").style.display = "none";
+            startUnity();
+        }
+
+        function startUnity() {
+            // FIXED: Using a strictly local relative asset directory specifically for your Unity file storage
+            var buildUrl = "Build";
+            var loaderUrl = "./" + buildUrl + "/game%20v2.loader.js";
+            var config = {
+                dataUrl: "./" + buildUrl + "/game%20v2.data",
+                frameworkUrl: "./" + buildUrl + "/game%20v2.framework.js",
+                codeUrl: "./" + buildUrl + "/game%20v2.wasm",
+                streamingAssetsUrl: "StreamingAssets",
+                companyName: "DefaultCompany",
+                productName: "My project",
+                productVersion: "0.1.0",
+            };
+
+            var script = document.createElement("script");
+            script.src = loaderUrl;
+            script.onload = () => {
+                createUnityInstance(document.getElementById("unity-canvas"), config)
+                    .catch((message) => alert(message));
+            };
+            document.body.appendChild(script);
+        }
+
+        setupDiscord().catch((err) => {
+            document.getElementById("loading-text").innerText = "Discord auth failed: " + err.message;
+            console.error(err);
         });
-        const response = await fetch("/.proxy/api/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
-        });
-        const { access_token } = await response.json();
-        await discordSdk.commands.authenticate({ access_token });
-        document.getElementById("loading-text").style.display = "none";
-        startUnity();
-      }
-      function startUnity() {
-        var buildUrl = "Build";
-        var loaderUrl = buildUrl + "/game v2.loader.js";
-        var config = {
-          dataUrl: buildUrl + "/game v2.data",
-          frameworkUrl: buildUrl + "/game v2.framework.js",
-          codeUrl: buildUrl + "/game v2.wasm",
-          streamingAssetsUrl: "StreamingAssets",
-          companyName: "DefaultCompany",
-          productName: "My project",
-          productVersion: "0.1.0",
-        };
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        script.onload = () => {
-          createUnityInstance(document.getElementById("unity-canvas"), config)
-            .catch((message) => alert(message));
-        };
-        document.body.appendChild(script);
-      }
-      setupDiscord().catch((err) => {
-        document.getElementById("loading-text").innerText =
-          "Discord auth failed: " + err.message;
-        console.error(err);
-      });
     </script>
-  </body>
+</body>
 </html>
