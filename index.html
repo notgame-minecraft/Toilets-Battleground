@@ -16,13 +16,11 @@
     <div id="unity-container">
         <canvas id="unity-canvas" tabindex="-1"></canvas>
     </div>
-
     <script type="module">
-        import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0";
+        import { DiscordSDK } from "/.proxy/esm-sh/@discord/embedded-app-sdk@2.5.0?bundle";
         
         const discordSdk = new DiscordSDK("1524489022930419904");
         window.discordSdk = discordSdk;
-
         async function setupDiscord() {
             try {
                 await discordSdk.ready();
@@ -33,16 +31,13 @@
                     prompt: "none",
                     scope: ["identify"],
                 });
-
                 const response = await fetch("/.proxy/api/token", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ code }),
                 });
-
                 const { access_token } = await response.json();
                 await discordSdk.commands.authenticate({ access_token });
-
                 document.getElementById("loading-text").style.display = "none";
                 startUnity();
             } catch (err) {
@@ -50,11 +45,9 @@
                 console.error(err);
             }
         }
-
         function startUnity() {
             var buildUrl = "Build";
             
-            // Fixed: Encoded spaces in file paths to survive Discord's proxy layer
             var loaderUrl = buildUrl + "/" + encodeURIComponent("game v2.loader.js");
             
             var config = {
@@ -66,11 +59,9 @@
                 productName: "My project",
                 productVersion: "0.1.0",
             };
-
             var script = document.createElement("script");
             script.src = loaderUrl;
             script.onload = () => {
-                // Fixed: Explicitly grabbing the Unity loader from the global window object
                 if (typeof window.createUnityInstance === "function") {
                     window.createUnityInstance(document.getElementById("unity-canvas"), config)
                         .catch((message) => alert(message));
@@ -83,7 +74,6 @@
             };
             document.body.appendChild(script);
         }
-
         setupDiscord();
     </script>
 </body>
