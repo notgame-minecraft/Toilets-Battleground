@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Toilets Battleground</title>
+    <style>
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: #000; overflow: hidden; }
+        #unity-container { width: 100%; height: 100%; }
+        #unity-canvas { width: 100%; height: 100%; display: block; }
+        #loading-text { color: #fff; font-family: sans-serif; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+    <div id="loading-text">Connecting to Discord...</div>
+    <div id="unity-container">
+        <canvas id="unity-canvas" tabindex="-1"></canvas>
+    </div>
+
+    <script src="discord-sdk.bundle.js"></script>
+    <script>
+        const discordSdk = new DiscordSDK("1524489022930419904");
+        window.discordSdk = discordSdk;
+        async function setupDiscord() {
+            try {
+                await discordSdk.ready();
+                const { code } = await discordSdk.commands.authorize({
+                    client_id: "1524489022930419904",
+                    response_type: "code",
+                    state: "",
+                    prompt: "none",
+                    scope: ["identify"],
+                });
+                const response = await fetch("/.proxy/api/token", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code }),
+                });
+                const { access_token } = await response.json();
+                await discordSdk.commands.authenticate({ access_token });
+                document.getElementById("loading-text").style.display = "none";
+                startUnity();
+            } catch (err) {
+                document.getElementById("loading-text").innerText = "Discord auth failed: " + err.message;
+                console.error(err);
+            }
+        }
+        function startUnity() {
+            var buildUrl = "Build";
+            var loaderUrl = buildUrl + "/" + encodeURIComponent("game v2.loader.js");
+            var config = {
+                dataUrl: buildUrl + "/" + encodeURIComponent("game v2.data"),
+                frameworkUrl: buildUrl + "/" + encodeURIComponent("game v2.framework.js"),
+                codeUrl: buildUrl + "/" + encodeURIComponent("game v2.wasm"),
+                streamingAssetsUrl: "StreamingAssets",
+                companyName: "DefaultCompany",
+                productName: "My project",
+                productVersion: "0.1.0",
+            };
+            var script = document.createElement("script");
+            script.src = loaderUrl;
+            script.onload = () => {
+                if (typeof window.createUnityInstance === "function") {
+                    window.createUnityInstance(document.getElementById("unity-canvas"), config)
+                        .catch((message) => alert(message));
+                } else if (typeof createUnityInstance === "function") {
+                    createUnityInstance(document.getElementById("unity-canvas"), config)
+                        .catch((message) => alert(message));
+                } else {
+                    alert("Unity loader script executed but createUnityInstance was not found.");
+                }
+            };
+            document.body.appendChild(script);
+        }
+        setupDiscord();
+    </script>
+</body>
+</html>
